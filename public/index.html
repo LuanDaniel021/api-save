@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação da API</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <h1 class="app-header__title">Documentação de API</h1>
+        <nav class="app-header__nav">
+            <a class="btn-nav">Docs</a>
+            <button class="btn-copy" onclick="copyText('http://localhost:3000', this)">Copiar Host Base</button>
+        </nav>
+    </header>
+
+    <article id="main" class="main-container"></article>
+
+    <script type="module">
+        import { api } from "./api.js";
+
+        function renderCard(item, index) {
+            return `
+                <section class="api-card">
+                    <h2 class="api-card__title">${item.title}</h2>
+                    ${renderContent(item.content, index)}
+                </section>
+            `;
+        }
+
+        function renderContent(content, index) {
+            return `
+                ${renderHeader(content.header)}
+                ${renderBody(content.body, index)}
+            `;
+        }
+
+        function renderHeader(headerData) {
+            const fullUrl = `${api.url}${headerData.path}`;
+            const methodClass = headerData.method.toLowerCase();
+
+            return `
+                <div class="api-card__header">
+                    <div class="api-card__meta">
+                        <div class="endpoint-group">
+                            <span class="badge-method badge-method--${methodClass}">${headerData.method}</span>
+                            <span>${headerData.path}</span>
+                        </div>
+                        <div class="tags-list">
+                            ${headerData.tags.map(tag => `<span class="tag-item">${tag}</span>`).join('')}
+                        </div>
+                    </div>       
+                    <div class="url-block">
+                        <span>${fullUrl}</span>
+                        <button class="btn-copy" onclick="copyText('${fullUrl}', this)">Copiar</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBody(bodyData, index) {
+            return `
+                <div class="api-card__body">
+                    <p class="api-card__desc">${bodyData.desc}</p>
+                    ${bodyData.req ? renderRequest(bodyData.req, index) : ""}
+                    ${bodyData.res ? renderResponse(bodyData.res) : ""}
+                </div>
+            `;
+        }
+
+        function renderResponse(resData) {
+            return `
+                <div>
+                    <h3 class="section-subtitle">Response</h3>
+                    <pre class="code-block"><code>${resData.code}</code></pre>
+                </div>
+            `;
+        }
+
+        function renderRequest(reqData, index) {
+            const jsonTabId = `tab-json-${index}`;
+            const schemaTabId = `tab-schema-${index}`;
+
+            return `
+                <div>
+                    <h3 class="section-subtitle">Request</h3>
+                    <div class="code-container">
+                        <div class="tabs-header">
+                            <button class="tab-btn tab-btn--active" onclick="switchTab(this, '${jsonTabId}', '${schemaTabId}')">JSON</button>
+                            <button class="tab-btn" onclick="switchTab(this, '${schemaTabId}', '${jsonTabId}')">Schema</button>
+                        </div>
+
+                        <div id="${jsonTabId}" class="tab-content tab-content--active">
+                            <pre class="code-block"><code>${reqData.json.code}</code></pre>
+                        </div>
+
+                        <div id="${schemaTabId}" class="tab-content">
+                            <div class="schema-container">
+                                ${reqData.schema.params.map(param => `
+                                    <div class="schema-row">
+                                        <span class="type-tag type-tag--required" title="Obrigatório">${param.priority}</span>
+                                        <span class="type-tag type-tag--datatype">${param.type}</span>
+                                        <span class="type-tag type-tag--name">${param.name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Funções anexadas a window para acesso por eventos inline (onclick)
+        window.switchTab = function(btn, showTabId, hideTabId) {
+            const container = btn.closest('.code-container');
+
+            container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-btn--active'));
+            btn.classList.add('tab-btn--active');
+
+            const showEl = document.getElementById(showTabId);
+            const hideEl = document.getElementById(hideTabId);
+
+            hideEl.classList.remove('tab-content--active');
+            showEl.classList.add('tab-content--active');
+        };
+
+        window.copyText = function(text, btn) {
+            navigator.clipboard.writeText(text);
+            const originalText = btn.innerText;
+            btn.innerText = 'Copiado!';
+            setTimeout(() => btn.innerText = originalText, 1500);
+        };
+
+        document.getElementById("main").innerHTML = api.routes.map((route, index) => renderCard(route, index)).join('');
+    </script>
+</body>
+</html>
